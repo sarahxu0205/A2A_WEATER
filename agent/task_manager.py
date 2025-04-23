@@ -24,7 +24,7 @@ from common.types import (
     InvalidParamsError,
 )
 from common.server.task_manager import InMemoryTaskManager
-from agent.agent import WeatherAgent  # 这里需要修改为从当前目录导入
+from agent.agent import WeatherAgent
 from common.utils.push_notification_auth import PushNotificationSenderAuth
 from common.server import utils
 from typing import Union
@@ -91,10 +91,10 @@ class AgentTaskManager(InMemoryTaskManager):
                 )
 
         except Exception as e:
-            logger.error(f"An error occurred while streaming the response: {e}")
+            logger.error(f"流式响应过程中发生错误：{e}")
             await self.enqueue_events_for_sse(
                 task_send_params.id,
-                InternalError(message=f"An error occurred while streaming the response: {e}")                
+                InternalError(message=f"流式响应过程中发生错误：{e}")                
             )
 
     def _validate_request(
@@ -105,27 +105,27 @@ class AgentTaskManager(InMemoryTaskManager):
             task_send_params.acceptedOutputModes, WeatherAgent.SUPPORTED_CONTENT_TYPES
         ):
             logger.warning(
-                "Unsupported output mode. Received %s, Support %s",
+                "不支持的输出模式。接收到 %s，支持的模式 %s",
                 task_send_params.acceptedOutputModes,
                 WeatherAgent.SUPPORTED_CONTENT_TYPES,
             )
             return utils.new_incompatible_types_error(request.id)
         
         if task_send_params.pushNotification and not task_send_params.pushNotification.url:
-            logger.warning("Push notification URL is missing")
-            return JSONRPCResponse(id=request.id, error=InvalidParamsError(message="Push notification URL is missing"))
+            logger.warning("推送通知URL缺失")
+            return JSONRPCResponse(id=request.id, error=InvalidParamsError(message="推送通知URL缺失"))
         
         return None
         
     async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
-        """Handles the 'send task' request."""
+        """处理'发送任务'请求。"""
         validation_error = self._validate_request(request)
         if validation_error:
             return SendTaskResponse(id=request.id, error=validation_error.error)
         
         if request.params.pushNotification:
             if not await self.set_push_notification_info(request.params.id, request.params.pushNotification):
-                return SendTaskResponse(id=request.id, error=InvalidParamsError(message="Push notification URL is invalid"))
+                return SendTaskResponse(id=request.id, error=InvalidParamsError(message="推送通知URL无效"))
 
         await self.upsert_task(request.params)
         task = await self.update_store(
@@ -138,8 +138,8 @@ class AgentTaskManager(InMemoryTaskManager):
         try:
             agent_response = self.agent.invoke(query, task_send_params.sessionId)
         except Exception as e:
-            logger.error(f"Error invoking agent: {e}")
-            raise ValueError(f"Error invoking agent: {e}")
+            logger.error(f"调用代理时出错：{e}")
+            raise ValueError(f"调用代理时出错：{e}")
         return await self._process_agent_response(
             request, agent_response
         )
@@ -156,7 +156,7 @@ class AgentTaskManager(InMemoryTaskManager):
 
             if request.params.pushNotification:
                 if not await self.set_push_notification_info(request.params.id, request.params.pushNotification):
-                    return JSONRPCResponse(id=request.id, error=InvalidParamsError(message="Push notification URL is invalid"))
+                    return JSONRPCResponse(id=request.id, error=InvalidParamsError(message="推送通知URL无效"))
 
             task_send_params: TaskSendParams = request.params
             sse_event_queue = await self.setup_sse_consumer(task_send_params.id, False)            
@@ -167,19 +167,19 @@ class AgentTaskManager(InMemoryTaskManager):
                 request.id, task_send_params.id, sse_event_queue
             )
         except Exception as e:
-            logger.error(f"Error in SSE stream: {e}")
+            logger.error(f"SSE流处理出错：{e}")
             print(traceback.format_exc())
             return JSONRPCResponse(
                 id=request.id,
                 error=InternalError(
-                    message="An error occurred while streaming the response"
+                    message="流式响应过程中发生错误"
                 ),
             )
 
     async def _process_agent_response(
         self, request: SendTaskRequest, agent_response: dict
     ) -> SendTaskResponse:
-        """Processes the agent's response and updates the task store."""
+        """处理代理的响应并更新任务存储。"""
         task_send_params: TaskSendParams = request.params
         task_id = task_send_params.id
         history_length = task_send_params.historyLength
@@ -205,16 +205,16 @@ class AgentTaskManager(InMemoryTaskManager):
     def _get_user_query(self, task_send_params: TaskSendParams) -> str:
         part = task_send_params.message.parts[0]
         if not isinstance(part, TextPart):
-            raise ValueError("Only text parts are supported")
+            raise ValueError("仅支持文本类型的输入")
         return part.text
     
     async def send_task_notification(self, task: Task):
         if not await self.has_push_notification_info(task.id):
-            logger.info(f"No push notification info found for task {task.id}")
+            logger.info(f"未找到任务 {task.id} 的推送通知信息")
             return
         push_info = await self.get_push_notification_info(task.id)
 
-        logger.info(f"Notifying for task {task.id} => {task.status.state}")
+        logger.info(f"正在为任务 {task.id} 发送通知 => {task.status.state}")
         await self.notification_sender_auth.send_push_notification(
             push_info.url,
             data=task.model_dump(exclude_none=True)
@@ -228,16 +228,16 @@ class AgentTaskManager(InMemoryTaskManager):
             sse_event_queue = await self.setup_sse_consumer(task_id_params.id, True)
             return self.dequeue_events_for_sse(request.id, task_id_params.id, sse_event_queue)
         except Exception as e:
-            logger.error(f"Error while reconnecting to SSE stream: {e}")
+            logger.error(f"重新连接到SSE流时出错：{e}")
             return JSONRPCResponse(
                 id=request.id,
                 error=InternalError(
-                    message=f"An error occurred while reconnecting to stream: {e}"
+                    message=f"重新连接到流时发生错误：{e}"
                 ),
             )
     
     async def set_push_notification_info(self, task_id: str, push_notification_config: PushNotificationConfig):
-        # Verify the ownership of notification URL by issuing a challenge request.
+        # 通过发出挑战请求验证通知URL的所有权
         is_verified = await self.notification_sender_auth.verify_push_notification_url(push_notification_config.url)
         if not is_verified:
             return False

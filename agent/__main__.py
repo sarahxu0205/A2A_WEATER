@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=10000)
 def main(host, port):
-    """Starts the Currency Agent server."""
+    """启动天气查询代理服务器。"""
     try:
         if not os.getenv("AMAP_API_KEY"):
-            raise MissingAPIKeyError("AMAP_API_KEY environment variable not set.")
+            raise MissingAPIKeyError("未设置 AMAP_API_KEY 环境变量。")
 
         capabilities = AgentCapabilities(streaming=True, pushNotifications=True)
         skill = AgentSkill(
@@ -58,13 +58,13 @@ def main(host, port):
             "/.well-known/jwks.json", notification_sender_auth.handle_jwks_endpoint, methods=["GET"]
         )
 
-        logger.info(f"Starting server on {host}:{port}")
+        logger.info(f"正在启动服务器，地址：{host}:{port}")
         server.start()
     except MissingAPIKeyError as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"错误：{e}")
         exit(1)
     except Exception as e:
-        logger.error(f"An error occurred during server startup: {e}")
+        logger.error(f"服务器启动过程中发生错误：{e}")
         exit(1)
 
 
