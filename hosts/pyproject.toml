@@ -1,0 +1,24 @@
+[project]
+name = "a2a-weather-client-cli"
+version = "0.1.0"
+description = "一个演示天气查询A2A代理功能的CLI应用程序"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "a2a-samples",
+    "asyncclick>=8.1.8",
+    "sse-starlette>=2.2.1",
+    "starlette>=0.46.1",
+    "uvicorn>=0.28.0",
+    "httpx>=0.28.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.uv.sources]
+a2a-samples = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
