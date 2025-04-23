@@ -5,17 +5,21 @@ from langchain_core.messages import AIMessage, ToolMessage
 import httpx
 from typing import Any, Dict, AsyncIterable, Literal
 from pydantic import BaseModel
+from dotenv import load_dotenv
 import os
 #from langchain_ollama import OllamaLLM
 from langchain_deepseek import ChatDeepSeek
 memory = MemorySaver()
 
+# 指定 .env 文件的绝对路径
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 @tool
 def get_weather_info(
     city: str,
     extensions: str = "base",
-    key: str = os.environ.get("AMAP_API_KEY", "您的高德地图API密钥"),
+    key: str = os.getenv("AMAP_API_KEY"),
 ):
     """用于获取城市天气信息。
 
@@ -63,7 +67,6 @@ class WeatherAgent:
      
     def __init__(self):
         self.model = ChatDeepSeek(model="deepseek-chat")
-        #self.model = OllamaLLM(model="deepseek-llm:7b")
         self.tools = [get_weather_info]
     
         self.graph = create_react_agent(

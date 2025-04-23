@@ -11,8 +11,11 @@ from agent.agent import WeatherAgent  # 修改导入路径
 import click
 import logging
 from dotenv import load_dotenv
+import os
 
-load_dotenv()
+# 指定 .env 文件的绝对路径
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
