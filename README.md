@@ -9,23 +9,34 @@ sequenceDiagram
     participant Client as A2A 客户端
     participant Server as A2A 服务器
     participant Agent as 天气查询代理
+    participant LLM as DeepSeek LLM
     participant API as 高德地图 API
 
     Client->>Server: 发送带有天气查询的任务
     Server->>Agent: 将查询转发给天气代理
+    
+    Agent->>LLM: 分析用户查询意图
 
     alt 完整信息
+        LLM->>Agent: 确认信息完整
         Agent->>API: 调用天气查询工具
         API->>Agent: 返回天气数据
+        Agent->>LLM: 处理天气数据
+        LLM->>Agent: 生成天气回复
         Agent->>Server: 处理数据并返回结果
         Server->>Client: 响应天气信息
     else 不完整信息
+        LLM->>Agent: 指出信息不完整
         Agent->>Server: 请求额外输入
         Server->>Client: 状态设置为"需要输入"
         Client->>Server: 发送额外信息
         Server->>Agent: 转发额外信息
+        Agent->>LLM: 再次分析用户意图
+        LLM->>Agent: 确认信息完整
         Agent->>API: 调用天气查询工具
         API->>Agent: 返回天气数据
+        Agent->>LLM: 处理天气数据
+        LLM->>Agent: 生成天气回复
         Agent->>Server: 处理数据并返回结果
         Server->>Client: 响应天气信息
     end
